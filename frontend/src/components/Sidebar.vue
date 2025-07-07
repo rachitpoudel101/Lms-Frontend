@@ -34,6 +34,13 @@
             <span>Settings</span>
           </router-link>
         </li>
+        <li>
+          <router-link to="/add-employee" class="flex items-center px-4 py-3 rounded-lg transition-colors"
+            :class="isActive('/add-employee') ? 'bg-cyan-700 text-white' : 'text-gray-300 hover:bg-slate-700'">
+            <span class="mr-3">👤+</span>
+            <span>Add Employee</span>
+          </router-link>
+        </li>
       </ul>
     </nav>
   </div>

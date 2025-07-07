@@ -33,7 +33,8 @@
               <thead class="bg-gray-50">
                 <tr>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee ID</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Full Name</th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
@@ -43,8 +44,9 @@
               <tbody class="bg-white divide-y divide-gray-200">
                 <tr v-for="user in users" :key="user.id" class="hover:bg-gray-50">
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ user.id }}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ user.employee_id || '-' }}</td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {{ user.first_name }} {{ user.last_name }}
+                    {{ `${user.first_name} ${user.last_name}`.trim() }}
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ user.email }}</td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ user.username }}</td>
@@ -83,6 +85,8 @@ interface User {
   first_name: string
   last_name: string
   is_active: boolean
+  employee_id?: string
+  department?: string
   role?: string
 }
 
@@ -97,12 +101,29 @@ export default defineComponent({
     const errorMessage = ref('')
     const router = useRouter()
 
+    // Cookie utility function
+    const getCookie = (name: string): string | null => {
+      const nameEQ = `${name}=`;
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        let cookie = cookies[i].trim();
+        if (cookie.indexOf(nameEQ) === 0) {
+          return decodeURIComponent(cookie.substring(nameEQ.length));
+        }
+      }
+      return null;
+    };
+    
+    const removeCookie = (name: string) => {
+      document.cookie = `${name}=; Max-Age=-99999999; path=/`;
+    };
+
     const fetchUsers = async () => {
       isLoading.value = true
       errorMessage.value = ''
 
       try {
-        const token = localStorage.getItem('authToken')
+        const token = getCookie('authToken')
         
         if (!token) {
           router.push('/login')
@@ -115,10 +136,35 @@ export default defineComponent({
           }
         })
         
-        users.value = Array.isArray(response.data) ? response.data : response.data.users || []
+        console.log('Raw API response:', response.data)
+        
+        if (Array.isArray(response.data)) {
+          users.value = response.data
+        } else if (response.data.users && Array.isArray(response.data.users)) {
+          users.value = response.data.users
+        } else {
+          // If the API returns a different structure, try to extract users
+          const extractedUsers = Object.values(response.data).filter(item => 
+            typeof item === 'object' && item !== null
+          )
+          
+          if (extractedUsers.length > 0) {
+            users.value = extractedUsers as User[]
+            console.log('Extracted users:', users.value)
+          } else {
+            console.error('Unable to parse users from response:', response.data)
+            errorMessage.value = 'Unable to parse user data from server response'
+            users.value = []
+          }
+        }
+        
+        // Debug log each user to check field names
+        users.value.forEach((user, index) => {
+          console.log(`User ${index}:`, user)
+        })
       } catch (error: any) {
         if (error.response?.status === 401) {
-          localStorage.removeItem('authToken')
+          removeCookie('authToken')
           router.push('/login')
         } else {
           errorMessage.value = error.response?.data?.detail || error.response?.data?.message || 'Failed to fetch users'

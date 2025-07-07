@@ -35,9 +35,28 @@ export default defineComponent({
   setup() {
     const route = useRoute()
     const router = useRouter()
-    const authToken = ref(localStorage.getItem('authToken'))
+    
+    // Cookie utility functions
+    const getCookie = (name: string): string | null => {
+      const nameEQ = `${name}=`;
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        let cookie = cookies[i].trim();
+        if (cookie.indexOf(nameEQ) === 0) {
+          return decodeURIComponent(cookie.substring(nameEQ.length));
+        }
+      }
+      return null;
+    };
+    
+    const removeCookie = (name: string) => {
+      document.cookie = `${name}=; Max-Age=-99999999; path=/`;
+    };
+    
+    const authToken = ref(getCookie('authToken'));
 
     const isAdminRoute = computed(() => {
+      // Updated to include all admin-related routes
       const adminRoutes = [
         '/dashboard', 
         '/users', 
@@ -55,18 +74,22 @@ export default defineComponent({
     const isAuthenticated = computed(() => {
       return !!authToken.value
     })
+    
     watch(() => route.path, () => {
-      authToken.value = localStorage.getItem('authToken')
+      authToken.value = getCookie('authToken')
     })
-    window.addEventListener('storage', (event) => {
-      if (event.key === 'authToken') {
-        authToken.value = event.newValue
+    
+    // Monitor cookie changes (less reliable than localStorage events)
+    setInterval(() => {
+      const currentToken = getCookie('authToken');
+      if (currentToken !== authToken.value) {
+        authToken.value = currentToken;
       }
-    })
+    }, 1000);
 
     const handleLogout = () => {
-      localStorage.removeItem('authToken')
-      authToken.value = null
+      removeCookie('authToken');
+      authToken.value = null;
       router.push('/login')
     }
 

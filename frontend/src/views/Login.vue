@@ -61,6 +61,15 @@ export default defineComponent({
     const isLoading = ref(false);
     const router = useRouter();
 
+    // Cookie utility functions
+    const setCookie = (name: string, value: string, days: number = 7) => {
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + days);
+      const cookieValue = encodeURIComponent(value) +
+        (days ? `; expires=${expiryDate.toUTCString()}` : "") +
+        "; path=/; SameSite=Strict";
+      document.cookie = `${name}=${cookieValue}`;
+    };
     const handleLogin = async () => {
       errorMessage.value = "";
       isLoading.value = true;
@@ -78,8 +87,9 @@ export default defineComponent({
           response.data.access_token || response.data.token || response.data.access;
 
         if (token) {
-          localStorage.setItem("authToken", token);
-          console.log("Token saved:", token);
+          // Store token in cookie instead of localStorage
+          setCookie("authToken", token);
+          console.log("Token saved to cookie");
           await router.push("/dashboard");
           console.log("Redirected to dashboard");
         } else {

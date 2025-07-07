@@ -77,17 +77,37 @@ export default defineComponent({
     const errorMessage = ref('')
     const router = useRouter()
 
+    // Cookie utility function
+    const getCookie = (name: string): string | null => {
+      const nameEQ = `${name}=`;
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        let cookie = cookies[i].trim();
+        if (cookie.indexOf(nameEQ) === 0) {
+          return decodeURIComponent(cookie.substring(nameEQ.length));
+        }
+      }
+      return null;
+    };
+    
+    const removeCookie = (name: string) => {
+      document.cookie = `${name}=; Max-Age=-99999999; path=/`;
+    };
+
     const fetchUsers = async () => {
       isLoading.value = true
       errorMessage.value = ''
 
       try {
-        const token = localStorage.getItem('authToken')
+        const token = getCookie('authToken')
+        console.log('Token found:', token ? 'Yes' : 'No')
         
         if (!token) {
           router.push('/login')
           return
         }
+
+        console.log('Fetching users from:', `${axios.defaults.baseURL}/${user}`)
         
         const response = await axios.get(user, {
           headers: {
@@ -95,10 +115,11 @@ export default defineComponent({
           }
         })
         
+        console.log('Users API response:', response.data)
         users.value = Array.isArray(response.data) ? response.data : response.data.users || []
       } catch (error: any) {
         if (error.response?.status === 401) {
-          localStorage.removeItem('authToken')
+          removeCookie('authToken')
           router.push('/login')
         } else {
           errorMessage.value = error.response?.data?.detail || error.response?.data?.message || 'Failed to fetch users'
