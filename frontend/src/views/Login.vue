@@ -65,7 +65,8 @@ export default defineComponent({
     const setCookie = (name: string, value: string, days: number = 7) => {
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + days);
-      const cookieValue = encodeURIComponent(value) +
+      const cookieValue =
+        encodeURIComponent(value) +
         (days ? `; expires=${expiryDate.toUTCString()}` : "") +
         "; path=/; SameSite=Strict";
       document.cookie = `${name}=${cookieValue}`;
@@ -75,7 +76,10 @@ export default defineComponent({
       isLoading.value = true;
 
       try {
-        console.log("Attempting login to:", `${axios.defaults.baseURL}/${login}`);
+        console.log(
+          "Attempting login to:",
+          `${axios.defaults.baseURL}/${login}`,
+        );
         const response = await axios.post(login, {
           username: username.value,
           password: password.value,
@@ -84,7 +88,9 @@ export default defineComponent({
 
         // Check for different possible token field names
         const token =
-          response.data.access_token || response.data.token || response.data.access;
+          response.data.access_token ||
+          response.data.token ||
+          response.data.access;
 
         if (token) {
           // Store token in cookie instead of localStorage
